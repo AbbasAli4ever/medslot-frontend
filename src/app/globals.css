@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@theme {
+  --color-canvas: #fafafa;
+  --color-line: #ececec;
+  --color-ink: #18181b;
+  --color-muted: #71717a;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+/* Native date input: keep the pill style consistent across browsers. */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0.45;
+  cursor: pointer;
+}
+
+/* Horizontal chip rows / day strips on phones. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Login showcase: slow diagonal drift of the cross pattern. */
+@keyframes medslot-drift {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(120px, -120px, 0); }
+}
