@@ -66,7 +66,7 @@ function DesktopBookingForm({ onClose, doctors, onBooked }: BookingProps) {
               <DoctorPicker doctors={doctors} value={doctorId} onChange={form.pickDoctor} />
             </Section>
             <Section title="Day">
-              <Calendar value={date} onChange={form.pickDate} />
+              <Calendar id="booking-calendar" value={date} onChange={form.pickDate} />
             </Section>
           </div>
 

@@ -17,12 +17,6 @@ body {
   color: var(--color-ink);
 }
 
-/* Native date input: keep the pill style consistent across browsers. */
-input[type="date"]::-webkit-calendar-picker-indicator {
-  opacity: 0.45;
-  cursor: pointer;
-}
-
 /* Horizontal chip rows / day strips on phones. */
 @utility no-scrollbar {
   scrollbar-width: none;

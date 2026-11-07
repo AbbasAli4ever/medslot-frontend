@@ -2,6 +2,7 @@
 
 import { motion } from "motion/react";
 import type { StaffUser } from "@/lib/auth";
+import { AccountMenu } from "./AccountMenu";
 import { Logo } from "./brand/Logo";
 import { PlusIcon } from "./icons";
 import { Button } from "./ui/Button";
@@ -17,14 +18,7 @@ export function Header({ onBook, user, onLogout }: HeaderProps) {
     <header className="sticky top-0 z-30 border-b border-line bg-white/80 pt-[env(safe-area-inset-top)] backdrop-blur">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6 md:h-16">
         <Logo size={30} />
-        <div className="flex items-center gap-2 md:gap-3">
-          <span className="hidden text-right leading-tight sm:block">
-            <span className="block text-[13px] font-medium text-ink">{user.name}</span>
-            <span className="block text-xs text-muted">{user.email}</span>
-          </span>
-          <Button variant="ghost" size="sm" onClick={onLogout}>
-            Log out
-          </Button>
+        <div className="flex items-center gap-3">
           {/* Phones use the floating pill at the bottom instead. */}
           <div className="hidden md:block">
             <Button variant="primary" onClick={onBook}>
@@ -32,6 +26,7 @@ export function Header({ onBook, user, onLogout }: HeaderProps) {
               Book appointment
             </Button>
           </div>
+          <AccountMenu user={user} onLogout={onLogout} />
         </div>
       </div>
     </header>

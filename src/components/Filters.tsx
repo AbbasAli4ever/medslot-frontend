@@ -5,7 +5,8 @@ import { AnimatePresence, motion } from "motion/react";
 import type { ReactNode } from "react";
 import { formatShortDate } from "@/lib/date";
 import type { AppointmentFilters, AppointmentStatus, Doctor } from "@/lib/types";
-import { ChevronDownIcon, SearchIcon, XIcon } from "./icons";
+import { DatePicker } from "./DatePicker";
+import { CalendarIcon, ChevronDownIcon, SearchIcon, XIcon } from "./icons";
 import { SegmentedControl } from "./ui/SegmentedControl";
 import { Select } from "./ui/Select";
 
@@ -67,13 +68,25 @@ function DesktopFilters({ filters, doctors, onChange, onClear }: FiltersProps) {
           ))}
         </Select>
 
-        <input
-          type="date"
-          aria-label="Filter by date"
-          value={filters.date}
-          onChange={(e) => onChange({ date: e.target.value })}
-          className="h-9 rounded-full border border-line bg-white px-4 text-sm text-ink outline-none transition-colors hover:border-zinc-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10"
-        />
+        <DatePicker
+          id="filter-date"
+          label="Filter by date"
+          value={filters.date || null}
+          onChange={(date) => onChange({ date: date ?? "" })}
+          allowPast
+          clearable
+          triggerClassName={clsx(
+            "inline-flex h-9 items-center gap-2 rounded-full border px-4 text-sm outline-none transition-colors",
+            "focus-visible:border-emerald-500 focus-visible:ring-4 focus-visible:ring-emerald-500/10",
+            filters.date
+              ? "border-emerald-600 bg-emerald-50 text-emerald-700"
+              : "border-line bg-white text-ink hover:border-zinc-300",
+          )}
+        >
+          <CalendarIcon className={filters.date ? "text-emerald-600" : "text-zinc-400"} />
+          {filters.date ? formatShortDate(filters.date) : "Any date"}
+          <ChevronDownIcon width={14} height={14} className="opacity-60" />
+        </DatePicker>
 
         <SegmentedControl
           id="status-filter"
@@ -147,7 +160,7 @@ function MobileFilters({ filters, doctors, onChange, onClear }: FiltersProps) {
 
         <span className="my-2 w-px shrink-0 bg-line" aria-hidden="true" />
 
-        {/* Native controls sit invisibly on top of the chips, so phones get their own pickers. */}
+        {/* A native select sits invisibly on top of the chip, so phones get their own picker. */}
         <OverlayChip active={!!doctorName} label={doctorName ?? "Doctor"}>
           <select
             aria-label="Filter by doctor"
@@ -164,22 +177,21 @@ function MobileFilters({ filters, doctors, onChange, onClear }: FiltersProps) {
           </select>
         </OverlayChip>
 
-        <OverlayChip active={!!filters.date} label={filters.date ? formatShortDate(filters.date) : "Date"}>
-          <input
-            type="date"
-            aria-label="Filter by date"
-            value={filters.date}
-            onChange={(e) => onChange({ date: e.target.value })}
-            onClick={(e) => {
-              try {
-                e.currentTarget.showPicker();
-              } catch {
-                /* older browsers open the picker on tap anyway */
-              }
-            }}
-            className="absolute inset-0 cursor-pointer opacity-0"
-          />
-        </OverlayChip>
+        <DatePicker
+          id="filter-date-mobile"
+          label="Filter by date"
+          value={filters.date || null}
+          onChange={(date) => onChange({ date: date ?? "" })}
+          allowPast
+          clearable
+          triggerClassName={clsx(
+            chipClass,
+            filters.date ? "border-emerald-600 bg-emerald-50 text-emerald-700" : "border-line bg-white text-zinc-700",
+          )}
+        >
+          {filters.date ? formatShortDate(filters.date) : "Any date"}
+          <ChevronDownIcon width={14} height={14} className="opacity-60" />
+        </DatePicker>
 
         {hasAnyFilter(filters) && (
           <button type="button" onClick={onClear} className={clsx(chipClass, "border-line bg-white text-emerald-700")}>

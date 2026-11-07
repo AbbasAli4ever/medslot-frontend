@@ -9,6 +9,7 @@ import {
   formatMonth,
   isBookableDay,
   isSameDay,
+  isSunday,
   monthGrid,
   parseISODate,
   startOfMonth,
@@ -21,17 +22,23 @@ interface CalendarProps {
   /** Selected date as YYYY-MM-DD, or null. */
   value: string | null;
   onChange: (value: string) => void;
+  /** Let staff pick past days too (filters, history). Booking keeps it off. */
+  allowPast?: boolean;
+  /** Unique per instance so the selection pill never animates between two calendars. */
+  id?: string;
+  /** Drop the outline when the calendar sits inside a popover or sheet. */
+  bare?: boolean;
 }
 
-/** Month calendar, Monday first. Sundays (clinic closed) and past days are disabled. */
-export function Calendar({ value, onChange }: CalendarProps) {
+/** Month calendar, Monday first. Sundays (clinic closed) are disabled, and so are past days unless `allowPast`. */
+export function Calendar({ value, onChange, allowPast = false, id = "calendar", bare = false }: CalendarProps) {
   const [today] = useState(startOfToday);
   const [month, setMonth] = useState(() => startOfMonth(value ? parseISODate(value) : today));
   const selected = value ? parseISODate(value) : null;
-  const canGoBack = month > startOfMonth(today);
+  const canGoBack = allowPast || month > startOfMonth(today);
 
   return (
-    <div className="rounded-xl border border-line p-3">
+    <div className={clsx(!bare && "rounded-xl border border-line", "p-3")}>
       <div className="mb-2 flex items-center justify-between px-1">
         <NavButton label="Previous month" disabled={!canGoBack} onClick={() => setMonth((m) => addMonths(m, -1))}>
           <ChevronLeftIcon />
@@ -53,7 +60,7 @@ export function Calendar({ value, onChange }: CalendarProps) {
 
         {monthGrid(month).flat().map((date, i) => {
           if (!date) return <div key={`blank-${i}`} />;
-          const disabled = !isBookableDay(date, today);
+          const disabled = allowPast ? isSunday(date) : !isBookableDay(date, today);
           const isSelected = selected !== null && isSameDay(date, selected);
           const isToday = isSameDay(date, today);
 
@@ -75,7 +82,7 @@ export function Calendar({ value, onChange }: CalendarProps) {
               >
                 {isSelected && (
                   <motion.span
-                    layoutId="calendar-selected"
+                    layoutId={`${id}-selected`}
                     className="absolute inset-0 rounded-full bg-emerald-600"
                     transition={{ type: "spring", stiffness: 500, damping: 36 }}
                   />
