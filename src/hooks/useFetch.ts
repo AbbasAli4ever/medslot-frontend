@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 
 interface FetchState<T> {
   key: string | null;
+  group?: string;
   version: number;
   data?: T;
   error?: unknown;
@@ -19,6 +20,15 @@ export interface FetchResult<T> {
   mutate: (update: (data: T) => T) => void;
 }
 
+export interface FetchOptions {
+  /**
+   * Requests that share a group keep the previous data on screen while the
+   * next key loads (e.g. pages of the same filtered list), instead of
+   * dropping back to a skeleton.
+   */
+  group?: string;
+}
+
 /**
  * Tiny data-fetching hook. `key` identifies the request (pass `null` to skip);
  * when it changes the old data is dropped so the UI can show a skeleton, while
@@ -28,6 +38,7 @@ export interface FetchResult<T> {
 export function useFetch<T>(
   key: string | null,
   loader: (signal: AbortSignal) => Promise<T>,
+  { group }: FetchOptions = {},
 ): FetchResult<T> {
   const [version, setVersion] = useState(0);
   const [state, setState] = useState<FetchState<T>>({ key: null, version: 0 });
@@ -37,11 +48,12 @@ export function useFetch<T>(
     const controller = new AbortController();
 
     loader(controller.signal).then(
-      (data) => setState({ key, version, data }),
+      (data) => setState({ key, group, version, data }),
       (error: unknown) => {
         if (controller.signal.aborted) return;
         setState((prev) => ({
           key,
+          group,
           version,
           data: prev.key === key ? prev.data : undefined,
           error,
@@ -50,9 +62,10 @@ export function useFetch<T>(
     );
 
     return () => controller.abort();
-  }, [key, version, loader]);
+  }, [key, group, version, loader]);
 
   const sameKey = key !== null && state.key === key;
+  const sameGroup = key !== null && group !== undefined && state.group === group;
   const isCurrent = sameKey && state.version === version;
 
   const refetch = useCallback(() => setVersion((v) => v + 1), []);
@@ -61,7 +74,7 @@ export function useFetch<T>(
   }, []);
 
   return {
-    data: sameKey ? state.data : undefined,
+    data: sameKey || sameGroup ? state.data : undefined,
     error: isCurrent ? state.error : undefined,
     isLoading: key !== null && !isCurrent,
     refetch,

@@ -13,6 +13,7 @@ import { AppointmentsTable } from "./AppointmentsTable";
 import { BookingDrawer } from "./BookingDrawer";
 import { Filters } from "./Filters";
 import { FloatingBookButton, Header } from "./Header";
+import { Pagination } from "./Pagination";
 import { Spinner } from "./ui/Spinner";
 import { useToast } from "./Toast";
 
@@ -60,7 +61,10 @@ export function ClinicDashboard() {
       const updated = await updateStatus(appointment.id, status);
       // Update the row in place so the badge animates, then sync with the server
       // (the row may no longer match the current status filter).
-      appointments.mutate((rows) => rows.map((row) => (row.id === updated.id ? updated : row)));
+      appointments.mutate((list) => ({
+        ...list,
+        results: list.results.map((row) => (row.id === updated.id ? updated : row)),
+      }));
       toast.success(
         status === "cancelled"
           ? `Cancelled ${appointment.patient_name}'s visit. The slot is free again.`
@@ -72,9 +76,9 @@ export function ClinicDashboard() {
     }
   }
 
-  const rows = appointments.data;
-  const subtitle = rows
-    ? `${rows.length} ${rows.length === 1 ? "appointment" : "appointments"}${hasFilters ? " match your filters" : " in total"}`
+  const list = appointments.data;
+  const subtitle = list
+    ? `${list.count} ${list.count === 1 ? "appointment" : "appointments"}${hasFilters ? " match your filters" : " in total"}`
     : appointments.error
       ? "Unavailable"
       : "Loading…";
@@ -102,7 +106,7 @@ export function ClinicDashboard() {
             <h1 className="text-2xl font-semibold tracking-tight text-ink">Appointments</h1>
             <p className="mt-1 flex items-center gap-2 text-sm text-muted">
               {subtitle}
-              {rows && appointments.isLoading && <Spinner className="text-zinc-400" />}
+              {list && appointments.isLoading && <Spinner className="text-zinc-400" />}
             </p>
           </div>
         </div>
@@ -115,7 +119,7 @@ export function ClinicDashboard() {
         />
 
         <AppointmentsTable
-          appointments={rows}
+          appointments={list?.results}
           isLoading={appointments.isLoading}
           error={appointments.error}
           errorText={errorMessage(appointments.error)}
@@ -125,6 +129,19 @@ export function ClinicDashboard() {
           onBook={openDrawer}
           onUpdateStatus={handleUpdateStatus}
         />
+
+        {list && (
+          <Pagination
+            page={appointments.page}
+            totalPages={list.total_pages}
+            count={list.count}
+            shown={list.results.length}
+            pageSize={appointments.pageSize}
+            isLoading={appointments.isLoading}
+            onPageChange={appointments.setPage}
+            onPageSizeChange={appointments.setPageSize}
+          />
+        )}
       </main>
 
       <FloatingBookButton onBook={openDrawer} />

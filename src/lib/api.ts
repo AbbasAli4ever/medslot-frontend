@@ -5,6 +5,7 @@ import type {
   ApiErrorBody,
   Doctor,
   NewAppointment,
+  Paginated,
 } from "./types";
 import { clearToken, getToken, UNAUTHORIZED_EVENT } from "./session";
 
@@ -59,14 +60,20 @@ export function getDoctors(signal?: AbortSignal) {
   return apiFetch<Doctor[]>("/doctors/", { signal });
 }
 
-export function listAppointments(filters: AppointmentFilters, signal?: AbortSignal) {
+export function listAppointments(
+  filters: AppointmentFilters,
+  page: number,
+  pageSize: number,
+  signal?: AbortSignal,
+) {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(filters)) {
     const trimmed = value.trim();
     if (trimmed) params.set(key, trimmed);
   }
-  const query = params.toString();
-  return apiFetch<Appointment[]>(`/appointments/${query ? `?${query}` : ""}`, { signal });
+  params.set("page", String(page));
+  params.set("page_size", String(pageSize));
+  return apiFetch<Paginated<Appointment>>(`/appointments/?${params}`, { signal });
 }
 
 export function createAppointment(input: NewAppointment) {

@@ -1,21 +1,59 @@
 "use client";
 
-import { useCallback } from "react";
-import { getAvailableSlots, getDoctors, listAppointments } from "@/lib/api";
-import type { AppointmentFilters } from "@/lib/types";
+import { useCallback, useState } from "react";
+import { ApiError, getAvailableSlots, getDoctors, listAppointments } from "@/lib/api";
+import type { AppointmentFilters, PageSize } from "@/lib/types";
 import { useFetch } from "./useFetch";
 
 export function useDoctors() {
   return useFetch("doctors", getDoctors);
 }
 
+/**
+ * Load one page of the filtered appointments list.
+ * A page past the end (the API answers 404, e.g. after the last row of the
+ * last page was cancelled under a status filter) falls back to the last page.
+ */
+async function loadPage(filters: AppointmentFilters, page: number, pageSize: number, signal: AbortSignal) {
+  try {
+    return await listAppointments(filters, page, pageSize, signal);
+  } catch (err) {
+    if (!(err instanceof ApiError) || err.status !== 404 || page === 1) throw err;
+    const first = await listAppointments(filters, 1, pageSize, signal);
+    return first.total_pages <= 1 ? first : listAppointments(filters, first.total_pages, pageSize, signal);
+  }
+}
+
+/**
+ * Paginated appointments list. The page resets to 1 whenever the filters or
+ * the page size change; while another page of the same list loads, the
+ * current rows stay on screen.
+ */
 export function useAppointments(filters: AppointmentFilters) {
-  const key = JSON.stringify(filters);
+  const filterKey = JSON.stringify(filters);
+  const [pageSize, setPageSizeState] = useState<PageSize>(10);
+  const group = `${filterKey}|${pageSize}`;
+  const [pageState, setPageState] = useState({ group, page: 1 });
+  const page = pageState.group === group ? pageState.page : 1;
+
+  const key = `${group}|${page}`;
   const loader = useCallback(
-    (signal: AbortSignal) => listAppointments(JSON.parse(key) as AppointmentFilters, signal),
-    [key],
+    (signal: AbortSignal) => loadPage(JSON.parse(filterKey) as AppointmentFilters, page, pageSize, signal),
+    [filterKey, page, pageSize],
   );
-  return useFetch(key, loader);
+  const result = useFetch(key, loader, { group: filterKey });
+
+  // The loader fell back to an earlier page: adopt it so the controls match.
+  // (Adjusting state during render is React's recommended pattern for this.)
+  const served = result.data?.page;
+  if (!result.isLoading && served !== undefined && served !== page) {
+    setPageState({ group, page: served });
+  }
+
+  const setPage = useCallback((next: number) => setPageState({ group, page: Math.max(1, next) }), [group]);
+  const setPageSize = useCallback((size: PageSize) => setPageSizeState(size), []);
+
+  return { ...result, page, pageSize, setPage, setPageSize };
 }
 
 export function useAvailableSlots(doctorId: number | null, date: string | null) {

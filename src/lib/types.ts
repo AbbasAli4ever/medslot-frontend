@@ -52,6 +52,19 @@ export interface NewAppointment {
   reason?: string;
 }
 
+/** Page sizes the list offers (the API caps page_size at 50). */
+export const PAGE_SIZES = [10, 20, 50] as const;
+export type PageSize = (typeof PAGE_SIZES)[number];
+
+/** Envelope of every paginated list endpoint. */
+export interface Paginated<T> {
+  count: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+  results: T[];
+}
+
 export interface AvailableSlots {
   doctor: Doctor;
   date: string;
