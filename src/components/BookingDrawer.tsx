@@ -16,7 +16,6 @@ import { Button } from "./ui/Button";
 import { Drawer } from "./ui/Drawer";
 import { ErrorAlert } from "./ui/ErrorAlert";
 
-
 /** Desktop: two-column drawer. Phones: full-screen step-by-step sheet. */
 export function BookingDrawer({ open, ...props }: BookingProps & { open: boolean }) {
   const isMobile = useIsMobile();
@@ -27,8 +26,8 @@ export function BookingDrawer({ open, ...props }: BookingProps & { open: boolean
   );
 }
 
-function DesktopBookingForm({ onClose, doctors, onBooked }: BookingProps) {
-  const form = useBookingForm(onBooked);
+function DesktopBookingForm({ onClose, doctors, onBooked, initial }: BookingProps) {
+  const form = useBookingForm(onBooked, initial);
   const { doctorId, date, slot, details } = form;
   const doctor = doctors?.find((d) => d.id === doctorId);
   // Keep typed details on screen even if the chosen slot was just taken.

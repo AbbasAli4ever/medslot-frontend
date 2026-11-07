@@ -17,6 +17,13 @@ export type PatientErrors = Partial<
   Record<"patient_name" | "patient_phone" | "duration_minutes" | "reason", string>
 >;
 
+/** Optional starting point, e.g. a free slot picked on the doctor's day timeline. */
+export interface BookingInitial {
+  doctorId: number;
+  date: string;
+  slot: string;
+}
+
 const EMPTY_DETAILS: PatientDetails = { name: "", phone: "", duration: 30, reason: "" };
 
 export function validatePhone(phone: string): string | undefined {
@@ -37,10 +44,10 @@ export function validatePatient({ name, phone }: PatientDetails): PatientErrors 
  * All booking state and logic, shared by the desktop drawer and the phone
  * step-by-step flow: selection, patient details, validation and submit.
  */
-export function useBookingForm(onBooked: (appointment: Appointment) => void) {
-  const [doctorId, setDoctorId] = useState<number | null>(null);
-  const [date, setDate] = useState<string | null>(null);
-  const [slot, setSlot] = useState<string | null>(null);
+export function useBookingForm(onBooked: (appointment: Appointment) => void, initial?: BookingInitial) {
+  const [doctorId, setDoctorId] = useState<number | null>(initial?.doctorId ?? null);
+  const [date, setDate] = useState<string | null>(initial?.date ?? null);
+  const [slot, setSlot] = useState<string | null>(initial?.slot ?? null);
   const [details, setDetails] = useState<PatientDetails>(EMPTY_DETAILS);
   const [errors, setErrors] = useState<PatientErrors>({});
   const [submitError, setSubmitError] = useState<string | null>(null);

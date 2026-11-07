@@ -136,3 +136,11 @@ export function formatTimestamp(value: string): string {
     minute: "2-digit",
   });
 }
+
+/** ("2026-11-10", 1) -> "2026-11-11" */
+export function addDays(value: string, amount: number): string {
+  const day = parseISODate(value);
+  return toISODate(new Date(day.getFullYear(), day.getMonth(), day.getDate() + amount));
+}
+
+export const todayISO = () => toISODate(startOfToday());

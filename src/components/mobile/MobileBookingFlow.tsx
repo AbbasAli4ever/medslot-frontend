@@ -6,7 +6,7 @@ import { useState, type ReactNode } from "react";
 import { errorMessage } from "@/lib/api";
 import { firstBookableDay, formatLongDate, formatShortDate, parseISODate, toISODate } from "@/lib/date";
 import type { Appointment, Doctor } from "@/lib/types";
-import { useBookingForm, type BookingForm } from "@/hooks/useBookingForm";
+import { useBookingForm, type BookingForm, type BookingInitial } from "@/hooks/useBookingForm";
 import { DoctorAvatar, DoctorPicker } from "../DoctorPicker";
 import { CalendarIcon, ChevronLeftIcon, InfoIcon, NoteIcon, UserIcon, XIcon } from "../icons";
 import { PatientFields } from "../PatientFields";
@@ -19,6 +19,8 @@ export interface BookingProps {
   onClose: () => void;
   doctors: Doctor[] | undefined;
   onBooked: (appointment: Appointment) => void;
+  /** Prefill doctor, day and time (the flow then opens on the details step). */
+  initial?: BookingInitial;
 }
 
 const STEPS = ["doctor", "time", "details", "confirm"] as const;
@@ -32,9 +34,9 @@ const slide = {
 };
 
 /** Phone booking: doctor → time → details → confirm, one screen at a time. */
-export function MobileBookingFlow({ onClose, doctors, onBooked }: BookingProps) {
-  const form = useBookingForm(onBooked);
-  const [[step, direction], setStep] = useState<[Step, number]>(["doctor", 1]);
+export function MobileBookingFlow({ onClose, doctors, onBooked, initial }: BookingProps) {
+  const form = useBookingForm(onBooked, initial);
+  const [[step, direction], setStep] = useState<[Step, number]>([initial ? "details" : "doctor", 1]);
   const index = STEPS.indexOf(step);
   const doctor = doctors?.find((d) => d.id === form.doctorId);
 

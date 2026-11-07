@@ -15,6 +15,8 @@ interface SegmentedControlProps<T extends string> {
   options: readonly Option<T>[];
   value: T;
   onChange: (value: T) => void;
+  /** Phones: fill the row with equal segments (back to inline from `md`). */
+  stretch?: boolean;
 }
 
 export function SegmentedControl<T extends string>({
@@ -23,9 +25,17 @@ export function SegmentedControl<T extends string>({
   options,
   value,
   onChange,
+  stretch = false,
 }: SegmentedControlProps<T>) {
   return (
-    <div role="radiogroup" aria-label={label} className="inline-flex h-9 items-center rounded-full bg-zinc-100 p-1">
+    <div
+      role="radiogroup"
+      aria-label={label}
+      className={clsx(
+        "items-center rounded-full bg-zinc-100 p-1",
+        stretch ? "flex h-11 w-full md:inline-flex md:h-9 md:w-auto" : "inline-flex h-9",
+      )}
+    >
       {options.map((option) => {
         const active = option.value === value;
         return (
@@ -36,7 +46,8 @@ export function SegmentedControl<T extends string>({
             aria-checked={active}
             onClick={() => onChange(option.value)}
             className={clsx(
-              "relative h-7 rounded-full px-3 text-[13px] font-medium transition-colors",
+              "relative rounded-full px-3 text-[13px] font-medium transition-colors",
+              stretch ? "h-9 flex-1 text-sm md:h-7 md:flex-none md:text-[13px]" : "h-7",
               "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-emerald-600",
               active ? "text-ink" : "text-zinc-500 hover:text-ink",
             )}

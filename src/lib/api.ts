@@ -4,6 +4,7 @@ import type {
   AvailableSlots,
   ApiErrorBody,
   Doctor,
+  DoctorDay,
   NewAppointment,
   Paginated,
 } from "./types";
@@ -93,6 +94,11 @@ export function updateStatus(id: number, status: "cancelled" | "completed") {
 export function getAvailableSlots(doctorId: number, date: string, signal?: AbortSignal) {
   const params = new URLSearchParams({ doctor: String(doctorId), date });
   return apiFetch<AvailableSlots>(`/appointments/available-slots/?${params}`, { signal });
+}
+
+export function getDoctorDay(doctorId: number, date: string, signal?: AbortSignal) {
+  const params = new URLSearchParams({ doctor: String(doctorId), date });
+  return apiFetch<DoctorDay>(`/appointments/doctor-day/?${params}`, { signal });
 }
 
 /* ------------------------------------------------------------------- errors */

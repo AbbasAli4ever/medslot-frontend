@@ -3,28 +3,38 @@
 import { MotionConfig } from "motion/react";
 import { useCallback, useEffect, useState } from "react";
 import { errorMessage, updateStatus } from "@/lib/api";
-import { formatDate } from "@/lib/date";
+import { formatDate, formatLongDate, todayISO } from "@/lib/date";
 import { EMPTY_FILTERS, type Appointment, type AppointmentFilters } from "@/lib/types";
-import { useAppointments, useDoctors } from "@/hooks/useClinicData";
+import type { BookingInitial } from "@/hooks/useBookingForm";
+import { useAppointments, useDoctorDay, useDoctors } from "@/hooks/useClinicData";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useSession } from "@/hooks/useSession";
 import { LogoMark } from "./brand/Logo";
 import { AppointmentsTable } from "./AppointmentsTable";
 import { BookingDrawer } from "./BookingDrawer";
+import { DoctorDayView } from "./doctor-day/DoctorDayView";
 import { Filters } from "./Filters";
 import { FloatingBookButton, Header } from "./Header";
 import { Pagination } from "./Pagination";
+import { SegmentedControl } from "./ui/SegmentedControl";
 import { Spinner } from "./ui/Spinner";
 import { useToast } from "./Toast";
 
 const HIGHLIGHT_MS = 3000;
 
-/** The whole single-page app: header, filtered appointments list, booking drawer. */
+type View = "appointments" | "day";
+const VIEW_OPTIONS = [
+  { value: "appointments", label: "Appointments" },
+  { value: "day", label: "Doctor's day" },
+] as const satisfies readonly { value: View; label: string }[];
+
+/** The whole single-page app: header, appointments list or doctor's day, booking drawer. */
 export function ClinicDashboard() {
   const session = useSession();
   const toast = useToast();
+  const [view, setView] = useState<View>("appointments");
   const [filters, setFilters] = useState<AppointmentFilters>(EMPTY_FILTERS);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [booking, setBooking] = useState<{ open: boolean; initial?: BookingInitial }>({ open: false });
   const [highlightId, setHighlightId] = useState<number | null>(null);
 
   // Typing in search waits 300ms before hitting the API; other filters apply at once.
@@ -32,14 +42,28 @@ export function ClinicDashboard() {
   const appointments = useAppointments({ ...filters, search });
   const doctors = useDoctors();
 
+  // Doctor's day: defaults to the first doctor and today. Only fetched while that view is open,
+  // so switching back to it always shows fresh data.
+  const [dayDoctor, setDayDoctor] = useState<number | null>(null);
+  const [dayDateChoice, setDayDate] = useState<string | null>(null);
+  const dayDoctorId = dayDoctor ?? doctors.data?.[0]?.id ?? null;
+  const dayDate = view === "day" ? (dayDateChoice ?? todayISO()) : null;
+  const doctorDay = useDoctorDay(view === "day" ? dayDoctorId : null, dayDate);
+
   const hasFilters = Object.values(filters).some((value) => value !== "");
-  const openDrawer = useCallback(() => setDrawerOpen(true), []);
+  const openDrawer = useCallback(() => setBooking({ open: true }), []);
+  const bookSlot = useCallback(
+    (doctorId: number, date: string, slot: string) => setBooking({ open: true, initial: { doctorId, date, slot } }),
+    [],
+  );
   const { refetch } = appointments;
-  // Closing the drawer also refreshes the list: a failed booking means our data may be stale.
+  const { refetch: refetchDay } = doctorDay;
+  // Closing the drawer also refreshes the data: a failed booking means it may be stale.
   const closeDrawer = useCallback(() => {
-    setDrawerOpen(false);
+    setBooking((prev) => ({ ...prev, open: false }));
     refetch();
-  }, [refetch]);
+    refetchDay();
+  }, [refetch, refetchDay]);
 
   useEffect(() => {
     if (highlightId === null) return;
@@ -48,12 +72,13 @@ export function ClinicDashboard() {
   }, [highlightId]);
 
   function handleBooked(appointment: Appointment) {
-    setDrawerOpen(false);
+    setBooking((prev) => ({ ...prev, open: false }));
     setHighlightId(appointment.id);
     toast.success(
       `Booked ${appointment.doctor_detail.name} at ${appointment.start_time} on ${formatDate(appointment.date)}`,
     );
     appointments.refetch();
+    doctorDay.refetch();
   }
 
   async function handleUpdateStatus(appointment: Appointment, status: "cancelled" | "completed") {
@@ -77,11 +102,19 @@ export function ClinicDashboard() {
   }
 
   const list = appointments.data;
-  const subtitle = list
+  const listSubtitle = list
     ? `${list.count} ${list.count === 1 ? "appointment" : "appointments"}${hasFilters ? " match your filters" : " in total"}`
     : appointments.error
       ? "Unavailable"
       : "Loading…";
+  const day = doctorDay.data;
+  const daySubtitle = day
+    ? `${day.doctor.name} · ${day.doctor.specialty} · ${formatLongDate(day.date)}`
+    : doctorDay.error
+      ? "Unavailable"
+      : "Loading…";
+  const subtitle = view === "appointments" ? listSubtitle : daySubtitle;
+  const refreshing = view === "appointments" ? !!list && appointments.isLoading : !!day && doctorDay.isLoading;
 
   // Staff-only: hold a branded splash until the session is confirmed (or we redirect to /login).
   if (!session.user) {
@@ -101,51 +134,78 @@ export function ClinicDashboard() {
 
       {/* Bottom padding on phones keeps the last row clear of the floating Book pill. */}
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-4 pt-6 pb-32 sm:px-6 md:gap-6 md:py-10">
-        <div className="flex items-end justify-between gap-4">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-ink">Appointments</h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-ink">
+              {view === "appointments" ? "Appointments" : "Doctor\u2019s day"}
+            </h1>
             <p className="mt-1 flex items-center gap-2 text-sm text-muted">
               {subtitle}
-              {list && appointments.isLoading && <Spinner className="text-zinc-400" />}
+              {refreshing && <Spinner className="text-zinc-400" />}
             </p>
+          </div>
+          {/* Phones: the switcher leads the page; desktop: it sits to the right of the title. */}
+          <div className="order-first md:order-none">
+            <SegmentedControl id="view" label="View" options={VIEW_OPTIONS} value={view} onChange={setView} stretch />
           </div>
         </div>
 
-        <Filters
-          filters={filters}
-          doctors={doctors.data ?? []}
-          onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
-          onClear={() => setFilters(EMPTY_FILTERS)}
-        />
+        {view === "appointments" ? (
+          <>
+            <Filters
+              filters={filters}
+              doctors={doctors.data ?? []}
+              onChange={(patch) => setFilters((prev) => ({ ...prev, ...patch }))}
+              onClear={() => setFilters(EMPTY_FILTERS)}
+            />
 
-        <AppointmentsTable
-          appointments={list?.results}
-          isLoading={appointments.isLoading}
-          error={appointments.error}
-          errorText={errorMessage(appointments.error)}
-          hasFilters={hasFilters}
-          highlightId={highlightId}
-          onRetry={appointments.refetch}
-          onBook={openDrawer}
-          onUpdateStatus={handleUpdateStatus}
-        />
+            <AppointmentsTable
+              appointments={list?.results}
+              isLoading={appointments.isLoading}
+              error={appointments.error}
+              errorText={errorMessage(appointments.error)}
+              hasFilters={hasFilters}
+              highlightId={highlightId}
+              onRetry={appointments.refetch}
+              onBook={openDrawer}
+              onUpdateStatus={handleUpdateStatus}
+            />
 
-        {list && (
-          <Pagination
-            page={appointments.page}
-            totalPages={list.total_pages}
-            count={list.count}
-            shown={list.results.length}
-            pageSize={appointments.pageSize}
-            isLoading={appointments.isLoading}
-            onPageChange={appointments.setPage}
-            onPageSizeChange={appointments.setPageSize}
+            {list && (
+              <Pagination
+                page={appointments.page}
+                totalPages={list.total_pages}
+                count={list.count}
+                shown={list.results.length}
+                pageSize={appointments.pageSize}
+                isLoading={appointments.isLoading}
+                onPageChange={appointments.setPage}
+                onPageSizeChange={appointments.setPageSize}
+              />
+            )}
+          </>
+        ) : (
+          <DoctorDayView
+            doctors={doctors.data}
+            doctorId={dayDoctorId}
+            date={dayDate ?? todayISO()}
+            day={doctorDay}
+            highlightId={highlightId}
+            onDoctorChange={setDayDoctor}
+            onDateChange={setDayDate}
+            onBookSlot={bookSlot}
           />
         )}
       </main>
 
       <FloatingBookButton onBook={openDrawer} />
-      <BookingDrawer open={drawerOpen} onClose={closeDrawer} doctors={doctors.data} onBooked={handleBooked} />
+      <BookingDrawer
+        open={booking.open}
+        initial={booking.initial}
+        onClose={closeDrawer}
+        doctors={doctors.data}
+        onBooked={handleBooked}
+      />
     </MotionConfig>
   );
 }

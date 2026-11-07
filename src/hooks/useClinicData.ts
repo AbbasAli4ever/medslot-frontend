@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { ApiError, getAvailableSlots, getDoctors, listAppointments } from "@/lib/api";
+import { ApiError, getAvailableSlots, getDoctorDay, getDoctors, listAppointments } from "@/lib/api";
 import type { AppointmentFilters, PageSize } from "@/lib/types";
 import { useFetch } from "./useFetch";
 
@@ -63,6 +63,19 @@ export function useAvailableSlots(doctorId: number | null, date: string | null) 
       doctorId !== null && date !== null
         ? getAvailableSlots(doctorId, date, signal).then((res) => res.slots)
         : Promise.resolve<string[]>([]),
+    [doctorId, date],
+  );
+  return useFetch(key, loader);
+}
+
+/** One doctor's day as 30-minute slots. Pass `null` to skip (e.g. while the view is hidden). */
+export function useDoctorDay(doctorId: number | null, date: string | null) {
+  const key = doctorId !== null && date !== null ? `day:${doctorId}:${date}` : null;
+  const loader = useCallback(
+    (signal: AbortSignal) => {
+      if (doctorId === null || date === null) return Promise.reject(new Error("No doctor or date"));
+      return getDoctorDay(doctorId, date, signal);
+    },
     [doctorId, date],
   );
   return useFetch(key, loader);

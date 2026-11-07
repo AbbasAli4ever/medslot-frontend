@@ -65,6 +65,37 @@ export interface Paginated<T> {
   results: T[];
 }
 
+export type SlotStatus = "free" | "booked" | "past";
+
+export interface DaySlotAppointment {
+  id: number;
+  patient_name: string;
+  start_time: string;
+  end_time: string;
+  duration_minutes: number;
+  status: AppointmentStatus;
+}
+
+export interface DaySlot {
+  /** HH:MM */
+  start: string;
+  /** HH:MM */
+  end: string;
+  status: SlotStatus;
+  /** Set for booked slots; a 60-minute visit appears on two consecutive slots. */
+  appointment: DaySlotAppointment | null;
+}
+
+/** One doctor's 30-minute grid for one day (`/appointments/doctor-day/`). */
+export interface DoctorDay {
+  doctor: Doctor;
+  date: string;
+  /** False on Sundays; `slots` is then empty. */
+  is_open: boolean;
+  summary: Record<SlotStatus, number>;
+  slots: DaySlot[];
+}
+
 export interface AvailableSlots {
   doctor: Doctor;
   date: string;
