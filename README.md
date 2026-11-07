@@ -69,4 +69,4 @@ public/illustrations/  AI-generated portraits and illustrations
 
 ## Related
 
-Backend (Django REST API): separate repository, `medslot-backend`.
+Backend (Django REST API) lives in a separate repo: https://github.com/AbbasAli4ever/medslot-backend
