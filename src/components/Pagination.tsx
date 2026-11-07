@@ -4,7 +4,7 @@ import clsx from "clsx";
 import { motion } from "motion/react";
 import { PAGE_SIZES, type PageSize } from "@/lib/types";
 import { ChevronLeftIcon, ChevronRightIcon } from "./icons";
-import { Select } from "./ui/Select";
+import { Dropdown } from "./ui/Dropdown";
 import { Spinner } from "./ui/Spinner";
 
 interface PaginationProps {
@@ -101,21 +101,18 @@ function DesktopPagination(props: PaginationProps) {
         </PageArrow>
       </div>
 
-      <label className="flex items-center gap-2 text-muted">
-        Rows per page
-        <Select
-          shape="pill"
+      <div className="flex items-center gap-2 text-muted">
+        <span id="page-size-label">Rows per page</span>
+        <Dropdown
+          id="page-size"
+          label="Rows per page"
           value={pageSize}
-          onChange={(e) => onPageSizeChange(Number(e.target.value) as PageSize)}
-          className="w-[76px]"
-        >
-          {PAGE_SIZES.map((size) => (
-            <option key={size} value={size}>
-              {size}
-            </option>
-          ))}
-        </Select>
-      </label>
+          options={PAGE_SIZES.map((size) => ({ value: size, label: String(size) }))}
+          onChange={onPageSizeChange}
+          align="end"
+          placement="top"
+        />
+      </div>
     </nav>
   );
 }

@@ -3,7 +3,7 @@
 import type { PatientDetails, PatientErrors } from "@/hooks/useBookingForm";
 import { DURATIONS, type Duration } from "@/lib/types";
 import { Field, Input, Textarea } from "./ui/Field";
-import { Select } from "./ui/Select";
+import { Dropdown } from "./ui/Dropdown";
 
 interface PatientFieldsProps {
   details: PatientDetails;
@@ -41,17 +41,15 @@ export function PatientFields({ details, errors, onChange, onPhoneBlur }: Patien
         />
       </Field>
       <Field label="Duration" htmlFor="duration" error={errors.duration_minutes}>
-        <Select
-          id="duration"
+        <Dropdown
+          id="duration-list"
+          triggerId="duration"
+          label="Duration"
+          variant="field"
           value={details.duration}
-          onChange={(e) => onChange({ duration: Number(e.target.value) as Duration })}
-        >
-          {DURATIONS.map((minutes) => (
-            <option key={minutes} value={minutes}>
-              {minutes} minutes
-            </option>
-          ))}
-        </Select>
+          options={DURATIONS.map((minutes) => ({ value: minutes, label: `${minutes} minutes` }))}
+          onChange={(duration: Duration) => onChange({ duration })}
+        />
       </Field>
       <div className="sm:col-span-2">
         <Field label="Reason (optional)" htmlFor="reason" error={errors.reason}>

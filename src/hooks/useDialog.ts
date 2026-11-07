@@ -13,12 +13,15 @@ export function useDialog(ref: RefObject<HTMLElement | null>, onClose: () => voi
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null;
     const dialog = ref.current;
-    dialog?.focus();
+    // Children may already have focused something inside (e.g. a listbox); keep that.
+    if (!dialog?.contains(document.activeElement)) dialog?.focus();
 
     const { overflow } = document.body.style;
     document.body.style.overflow = "hidden";
 
     function onKeyDown(event: KeyboardEvent) {
+      // A sheet stacked on top (portaled elsewhere) handles its own keys.
+      if (dialog && event.target instanceof Node && event.target !== document.body && !dialog.contains(event.target)) return;
       if (event.key === "Escape") {
         event.preventDefault();
         onClose();

@@ -1,11 +1,9 @@
 "use client";
 
-import clsx from "clsx";
-import { motion } from "motion/react";
 import { addDays, formatDate, todayISO } from "@/lib/date";
 import type { Doctor } from "@/lib/types";
 import { DatePicker } from "../DatePicker";
-import { DoctorAvatar } from "../DoctorPicker";
+import { DoctorSelect } from "../DoctorSelect";
 import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from "../icons";
 import { Skeleton } from "../ui/Skeleton";
 
@@ -17,52 +15,22 @@ interface DayControlsProps {
   onDateChange: (date: string) => void;
 }
 
-/** Doctor chips and a prev / pick / next day control. */
+/** Doctor dropdown and a prev / pick / next day control. */
 export function DayControls({ doctors, doctorId, date, onDoctorChange, onDateChange }: DayControlsProps) {
   const isToday = date === todayISO();
 
   return (
     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:rounded-2xl md:border md:border-line md:bg-white md:p-3">
       {doctors ? (
-        <div
-          role="radiogroup"
-          aria-label="Doctor"
-          className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 md:mx-0 md:px-0"
-        >
-          {doctors.map((doctor) => {
-            const selected = doctor.id === doctorId;
-            return (
-              <button
-                key={doctor.id}
-                type="button"
-                role="radio"
-                aria-checked={selected}
-                onClick={() => onDoctorChange(doctor.id)}
-                className={clsx(
-                  "relative inline-flex h-11 shrink-0 items-center gap-2 rounded-full border py-1 pr-4 pl-1 text-sm font-medium transition-colors md:h-10",
-                  "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-emerald-600",
-                  selected ? "border-emerald-500 text-emerald-800" : "border-line bg-white text-zinc-700 hover:border-zinc-300",
-                )}
-              >
-                {selected && (
-                  <motion.span
-                    layoutId="day-doctor-chip"
-                    className="absolute inset-0 rounded-full bg-emerald-50"
-                    transition={{ type: "spring", stiffness: 500, damping: 38 }}
-                  />
-                )}
-                <DoctorAvatar name={doctor.name} tone={selected ? "solid" : "muted"} className="relative size-8!" />
-                <span className="relative">{doctor.name}</span>
-              </button>
-            );
-          })}
-        </div>
+        <DoctorSelect
+          id="day-doctor"
+          label="Doctor"
+          doctors={doctors}
+          value={doctorId === null ? "" : String(doctorId)}
+          onChange={(id) => onDoctorChange(Number(id))}
+        />
       ) : (
-        <div className="flex gap-2" aria-hidden="true">
-          {[0, 1, 2].map((i) => (
-            <Skeleton key={i} className="h-10 w-32 rounded-full" />
-          ))}
-        </div>
+        <Skeleton className="h-9 w-40 rounded-full" />
       )}
 
       <div className="flex items-center gap-1.5">

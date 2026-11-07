@@ -52,13 +52,17 @@ browser can reach (the default is `http://localhost:8000/api`).
   rows-per-page select (10/20/50). Phones get a Prev / Next bar. The list goes back to page 1 when a
   filter changes, and falls back to the last page if the current one stops existing (for example
   after cancelling the last row of the last page under a status filter).
-- **Doctor's day**: a second view that shows one doctor's day as 16 half-hour slots. Booked visits
-  are cards (a 60-minute visit spans two slots), free slots open the booking flow prefilled with
-  that doctor, day and time, and past slots are greyed out. It has a free/booked/past summary and a
-  "closed on Sundays" state.
+- **Doctor's day**: a second view that shows one doctor's day as 16 half-hour slot pills, in the same
+  style as the booking drawer's times. Free pills open the booking flow prefilled with that doctor,
+  day and time. Booked pills show the patient's first name and open their details (a 60-minute visit
+  appears on both of its pills), completed ones are neutral, and past ones are greyed out. It has a
+  compact free/booked/past strip and a "closed on Sundays" state.
 - **Date picker**: every date control opens the same calendar (a popover on desktop, a bottom sheet
   on phones). Nothing accepts a typed date. Filters can pick past days, and Sundays are disabled.
 - **Account menu**: an avatar menu in the header with the signed-in user and Log out.
+- **Dropdowns**: no native selects. Doctor, page size and duration use one `Dropdown` (listbox with
+  keyboard support and type-ahead), with portraits for doctors. It is a popover on desktop and a
+  bottom sheet on phones.
 - **Booking drawer**: doctor picker, calendar, live free slots for the chosen doctor and day, patient
   fields, and client-side validation. The server's error messages are shown per field.
 - **Mobile layout**: a date-grouped appointment list, bottom sheets, and a 4-step booking flow
@@ -76,7 +80,7 @@ browser can reach (the default is `http://localhost:8000/api`).
 src/
   app/              layout, dashboard page (/), login page (/login), icon
   components/       dashboard, table, filters, row actions, booking drawer, calendar, slots
-    ui/             primitives: Button, Drawer, BottomSheet, Field, Select, Skeleton, ...
+    ui/             primitives: Button, Drawer, BottomSheet, Dropdown, Field, Skeleton, ...
     mobile/         mobile list, day strip, slot list, stepped booking flow
     doctor-day/     doctor's day view: controls, summary, timeline
     login/          login form and showcase panel

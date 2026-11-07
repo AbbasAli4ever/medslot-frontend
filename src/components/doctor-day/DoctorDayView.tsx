@@ -24,7 +24,7 @@ interface DoctorDayViewProps {
   onBookSlot: (doctorId: number, date: string, start: string) => void;
 }
 
-/** One doctor's day as a 30-minute timeline: who's booked, what's free, what's past. */
+/** One doctor's day as 30-minute slot pills: who's booked, what's free, what's past. */
 export function DoctorDayView(props: DoctorDayViewProps) {
   const { doctors, doctorId, date, day, highlightId, onDoctorChange, onDateChange, onBookSlot } = props;
   const data = day.data;
@@ -59,6 +59,7 @@ export function DoctorDayView(props: DoctorDayViewProps) {
             <>
               <DaySummary summary={data.summary} />
               <DayTimeline
+                date={data.date}
                 slots={data.slots}
                 highlightId={highlightId}
                 onBook={(start) => onBookSlot(data.doctor.id, data.date, start)}
@@ -76,18 +77,14 @@ export function DoctorDayView(props: DoctorDayViewProps) {
 function DaySkeleton() {
   return (
     <div className="flex flex-col gap-4 md:gap-5" aria-busy="true" aria-label="Loading the day">
-      <div className="grid grid-cols-3 gap-2 md:gap-3">
-        {[0, 1, 2].map((i) => (
-          <Skeleton key={i} className="h-[92px] rounded-2xl" />
-        ))}
-      </div>
-      <div className="flex flex-col gap-2 rounded-2xl border border-line bg-white p-3 md:p-4">
-        {Array.from({ length: 8 }, (_, i) => (
-          <div key={i} className="flex items-center gap-3">
-            <Skeleton className="h-3 w-12" />
-            <Skeleton className="h-14 flex-1 rounded-xl" />
-          </div>
-        ))}
+      <Skeleton className="h-[62px] rounded-2xl" />
+      <div className="flex flex-col gap-3 rounded-2xl border border-line bg-white p-4 md:p-5">
+        <Skeleton className="h-3 w-36" />
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+          {Array.from({ length: 16 }, (_, i) => (
+            <Skeleton key={i} className="h-10 rounded-full" />
+          ))}
+        </div>
       </div>
     </div>
   );

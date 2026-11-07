@@ -26,16 +26,19 @@ export function usePopover<TTrigger extends HTMLElement = HTMLButtonElement>({ d
     }
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
+        // Handled here only: a drawer underneath must not close too.
         event.preventDefault();
+        event.stopPropagation();
         close();
       }
     }
 
     document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
+    // Capture on window runs before any dialog's document-level Escape handler.
+    window.addEventListener("keydown", onKeyDown, true);
     return () => {
       document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keydown", onKeyDown, true);
     };
   }, [open, dismiss, close]);
 

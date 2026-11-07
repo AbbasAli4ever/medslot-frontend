@@ -2,13 +2,12 @@
 
 import clsx from "clsx";
 import { AnimatePresence, motion } from "motion/react";
-import type { ReactNode } from "react";
 import { formatShortDate } from "@/lib/date";
 import type { AppointmentFilters, AppointmentStatus, Doctor } from "@/lib/types";
 import { DatePicker } from "./DatePicker";
+import { DoctorSelect } from "./DoctorSelect";
 import { CalendarIcon, ChevronDownIcon, SearchIcon, XIcon } from "./icons";
 import { SegmentedControl } from "./ui/SegmentedControl";
-import { Select } from "./ui/Select";
 
 const STATUS_OPTIONS: { value: AppointmentStatus | ""; label: string }[] = [
   { value: "", label: "All" },
@@ -53,20 +52,14 @@ function DesktopFilters({ filters, doctors, onChange, onClear }: FiltersProps) {
       </label>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Select
-          shape="pill"
-          aria-label="Filter by doctor"
+        <DoctorSelect
+          id="filter-doctor"
+          label="Filter by doctor"
+          doctors={doctors}
           value={filters.doctor}
-          onChange={(e) => onChange({ doctor: e.target.value })}
-          className="w-44"
-        >
-          <option value="">All doctors</option>
-          {doctors.map((doctor) => (
-            <option key={doctor.id} value={doctor.id}>
-              {doctor.name}
-            </option>
-          ))}
-        </Select>
+          onChange={(doctor) => onChange({ doctor })}
+          allowAll
+        />
 
         <DatePicker
           id="filter-date"
@@ -119,8 +112,6 @@ function DesktopFilters({ filters, doctors, onChange, onClear }: FiltersProps) {
 
 /** Sticky search + a horizontally scrolling chip row (status, doctor, date). */
 function MobileFilters({ filters, doctors, onChange, onClear }: FiltersProps) {
-  const doctorName = doctors.find((d) => String(d.id) === filters.doctor)?.name;
-
   return (
     <div className="sticky top-14 z-20 -mx-4 flex flex-col gap-3 border-b border-line bg-canvas/90 px-4 py-3 backdrop-blur md:hidden">
       <label className="relative">
@@ -160,22 +151,15 @@ function MobileFilters({ filters, doctors, onChange, onClear }: FiltersProps) {
 
         <span className="my-2 w-px shrink-0 bg-line" aria-hidden="true" />
 
-        {/* A native select sits invisibly on top of the chip, so phones get their own picker. */}
-        <OverlayChip active={!!doctorName} label={doctorName ?? "Doctor"}>
-          <select
-            aria-label="Filter by doctor"
-            value={filters.doctor}
-            onChange={(e) => onChange({ doctor: e.target.value })}
-            className="absolute inset-0 cursor-pointer opacity-0"
-          >
-            <option value="">All doctors</option>
-            {doctors.map((doctor) => (
-              <option key={doctor.id} value={doctor.id}>
-                {doctor.name}
-              </option>
-            ))}
-          </select>
-        </OverlayChip>
+        <DoctorSelect
+          id="filter-doctor-mobile"
+          label="Filter by doctor"
+          doctors={doctors}
+          value={filters.doctor}
+          onChange={(doctor) => onChange({ doctor })}
+          allowAll
+          variant="chip"
+        />
 
         <DatePicker
           id="filter-date-mobile"
@@ -206,18 +190,3 @@ function MobileFilters({ filters, doctors, onChange, onClear }: FiltersProps) {
 
 const chipClass =
   "relative inline-flex h-11 shrink-0 snap-start items-center gap-1.5 rounded-full border px-4 text-sm font-medium whitespace-nowrap transition-colors";
-
-function OverlayChip({ active, label, children }: { active: boolean; label: string; children: ReactNode }) {
-  return (
-    <span
-      className={clsx(
-        chipClass,
-        active ? "border-emerald-600 bg-emerald-50 text-emerald-700" : "border-line bg-white text-zinc-700",
-      )}
-    >
-      {label}
-      <ChevronDownIcon width={14} height={14} className="opacity-60" />
-      {children}
-    </span>
-  );
-}

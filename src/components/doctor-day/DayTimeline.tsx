@@ -1,129 +1,172 @@
 "use client";
 
 import clsx from "clsx";
-import { motion } from "motion/react";
-import type { CSSProperties } from "react";
-import type { DaySlot } from "@/lib/types";
+import { AnimatePresence, motion } from "motion/react";
+import { createPortal } from "react-dom";
+import { formatLongDate } from "@/lib/date";
+import type { DaySlot, DaySlotAppointment } from "@/lib/types";
+import { useIsMobile } from "@/hooks/useMediaQuery";
+import { usePopover } from "@/hooks/usePopover";
 import { PlusIcon } from "../icons";
 import { StatusBadge } from "../StatusBadge";
-import { buildTimeline, type TimelineItem } from "./timeline";
-
-/** Height of one 30-minute slot, and the gap between slots, in px. */
-const ROW = 56;
-const GAP = 8;
+import { BottomSheet } from "../ui/BottomSheet";
 
 interface DayTimelineProps {
+  date: string;
   slots: DaySlot[];
   highlightId: number | null;
   onBook: (start: string) => void;
 }
 
-/** Vertical day grid: times on the left, one block per slot (visits span the slots they fill). */
-export function DayTimeline({ slots, highlightId, onBook }: DayTimelineProps) {
-  const items = buildTimeline(slots);
-  const grid: CSSProperties = { gridAutoRows: `${ROW}px`, rowGap: `${GAP}px` };
+/** Same rhythm as the booking drawer's time grid. */
+const list = { hidden: {}, show: { transition: { staggerChildren: 0.02 } } };
+const pill = { hidden: { opacity: 0, y: 6 }, show: { opacity: 1, y: 0 } };
 
+const PILL =
+  "relative flex h-10 w-full items-center justify-center gap-1.5 rounded-full border px-3 text-sm font-medium tabular-nums transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-emerald-600";
+
+/** The day's 30-minute slots as pills: free ones book, booked ones show the patient. */
+export function DayTimeline({ date, slots, highlightId, onBook }: DayTimelineProps) {
   return (
-    <div className="rounded-2xl border border-line bg-white p-3 md:p-4">
-      <ol className="grid grid-cols-[48px_1fr] gap-x-3 md:grid-cols-[56px_1fr]" style={grid} aria-label="Time slots">
-        {slots.map((slot, i) => (
-          <li
-            key={`time-${slot.start}`}
-            aria-hidden="true"
-            className={clsx(
-              "pt-2 text-right text-xs font-medium tabular-nums",
-              slot.status === "past" ? "text-zinc-300" : "text-muted",
+    <section className="flex flex-col gap-3 rounded-2xl border border-line bg-white p-4 md:p-5" aria-labelledby="day-slots-title">
+      <h3 id="day-slots-title" className="text-xs font-medium tracking-wide text-muted uppercase">
+        {formatLongDate(date)}
+      </h3>
+      <motion.ul
+        className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4"
+        variants={list}
+        initial="hidden"
+        animate="show"
+      >
+        {slots.map((slot, index) => (
+          <motion.li key={slot.start} variants={pill}>
+            {slot.appointment ? (
+              <AppointmentPill
+                slot={slot}
+                appointment={slot.appointment}
+                highlighted={slot.appointment.id === highlightId}
+                alignEnd={index % 4 >= 2}
+              />
+            ) : slot.status === "free" ? (
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.96 }}
+                onClick={() => onBook(slot.start)}
+                aria-label={`Book ${slot.start} to ${slot.end}`}
+                className={clsx(PILL, "group border-line bg-white text-ink hover:border-emerald-500 hover:text-emerald-700")}
+              >
+                {slot.start}
+                <PlusIcon
+                  width={14}
+                  height={14}
+                  className="-mr-1 w-0 opacity-0 transition-all group-hover:w-3.5 group-hover:opacity-100 group-focus-visible:w-3.5 group-focus-visible:opacity-100"
+                />
+              </motion.button>
+            ) : (
+              <button
+                type="button"
+                disabled
+                aria-label={`${slot.start}, past`}
+                className={clsx(PILL, "cursor-not-allowed border-transparent bg-zinc-50 text-zinc-300")}
+              >
+                {slot.start}
+              </button>
             )}
-            style={{ gridColumn: 1, gridRow: i + 1 }}
-          >
-            {slot.start}
-          </li>
-        ))}
-
-        {items.map((item, index) => (
-          <motion.li
-            key={item.key}
-            initial={{ opacity: 0, x: 8 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: Math.min(index, 16) * 0.025, duration: 0.25 }}
-            style={{ gridColumn: 2, gridRow: `${item.row} / span ${item.span}` }}
-            className="min-w-0"
-          >
-            <TimelineBlock item={item} highlighted={item.kind === "appointment" && item.appointment.id === highlightId} onBook={onBook} />
           </motion.li>
         ))}
-      </ol>
-    </div>
+      </motion.ul>
+    </section>
   );
 }
 
-function TimelineBlock({
-  item,
+/** Booked / completed slot: soft filled pill; click for the patient, time range and status. */
+function AppointmentPill({
+  slot,
+  appointment,
   highlighted,
-  onBook,
+  alignEnd,
 }: {
-  item: TimelineItem;
+  slot: DaySlot;
+  appointment: DaySlotAppointment;
   highlighted: boolean;
-  onBook: (start: string) => void;
+  alignEnd: boolean;
 }) {
-  if (item.kind === "free") {
-    return (
-      <button
-        type="button"
-        onClick={() => onBook(item.start)}
-        aria-label={`Book ${item.start} to ${item.end}`}
-        className={clsx(
-          "group flex h-full w-full items-center justify-between rounded-xl border border-dashed border-emerald-300 px-3.5 text-left transition-colors",
-          "hover:border-emerald-500 hover:bg-emerald-50/60 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-emerald-600 active:bg-emerald-50",
-        )}
-      >
-        <span className="text-[13px] text-muted tabular-nums">
-          {item.start} – {item.end} · Free
-        </span>
-        <span className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[13px] font-medium text-emerald-700 transition-colors group-hover:bg-emerald-100">
-          <PlusIcon width={14} height={14} />
-          Book
-        </span>
-      </button>
-    );
-  }
+  const isMobile = useIsMobile();
+  const { open, setOpen, toggle, rootRef, triggerRef } = usePopover({ dismiss: !isMobile });
+  const firstName = appointment.patient_name.trim().split(/\s+/)[0];
+  const completed = appointment.status === "completed";
+  const detailsId = `slot-${slot.start.replace(":", "")}-details`;
 
-  if (item.kind === "past") {
-    return (
-      <div className="flex h-full items-center rounded-xl bg-zinc-50 px-3.5 text-[13px] text-zinc-400 tabular-nums">
-        {item.start} – {item.end} · Past
-      </div>
-    );
-  }
-
-  const { appointment, past, span } = item;
-  return (
-    <motion.div
-      initial={false}
-      animate={{
-        boxShadow: highlighted
-          ? ["0 0 0 0 rgba(16,185,129,0.5)", "0 0 0 6px rgba(16,185,129,0.15)", "0 0 0 0 rgba(16,185,129,0)"]
-          : "0 0 0 0 rgba(16,185,129,0)",
-      }}
-      transition={{ duration: highlighted ? 1.6 : 0 }}
-      className={clsx(
-        "flex h-full items-center gap-3 rounded-xl border pr-3 pl-2.5",
-        past ? "border-line bg-zinc-50" : "border-emerald-200 bg-emerald-50",
-      )}
-    >
-      <span
-        className={clsx("w-1 self-stretch rounded-full", past ? "bg-zinc-300" : "bg-emerald-500", span > 1 ? "my-3" : "my-2.5")}
-        aria-hidden="true"
-      />
-      <div className="min-w-0 flex-1">
-        <p className={clsx("truncate text-sm font-semibold", past ? "text-zinc-500" : "text-ink")}>
+  const details = (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-start justify-between gap-3">
+        <p id={`${detailsId}-title`} className="truncate font-semibold text-ink">
           {appointment.patient_name}
         </p>
-        <p className="text-xs text-muted tabular-nums">
-          {appointment.start_time} – {appointment.end_time} · {appointment.duration_minutes} min
-        </p>
+        <StatusBadge status={appointment.status} />
       </div>
-      <StatusBadge status={appointment.status} />
-    </motion.div>
+      <p className="text-sm text-muted tabular-nums">
+        {appointment.start_time} – {appointment.end_time} · {appointment.duration_minutes} min
+      </p>
+    </div>
+  );
+
+  return (
+    <div ref={rootRef} className="relative">
+      <motion.button
+        ref={triggerRef}
+        type="button"
+        whileTap={{ scale: 0.96 }}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label={`${slot.start}, ${completed ? "completed" : "booked"}: ${appointment.patient_name}`}
+        onClick={toggle}
+        initial={false}
+        animate={{
+          boxShadow: highlighted
+            ? ["0 0 0 0 rgba(16,185,129,0.5)", "0 0 0 6px rgba(16,185,129,0.15)", "0 0 0 0 rgba(16,185,129,0)"]
+            : "0 0 0 0 rgba(16,185,129,0)",
+        }}
+        transition={{ boxShadow: { duration: highlighted ? 1.6 : 0 } }}
+        className={clsx(
+          PILL,
+          "border-transparent",
+          completed ? "bg-zinc-100 text-zinc-600 hover:bg-zinc-200/70" : "bg-emerald-50 text-emerald-800 hover:bg-emerald-100",
+          open && (completed ? "bg-zinc-200/70" : "bg-emerald-100"),
+        )}
+      >
+        <span>{slot.start}</span>
+        <span className="min-w-0 truncate font-normal opacity-80">· {firstName}</span>
+      </motion.button>
+
+      {!isMobile && (
+        <AnimatePresence>
+          {open && (
+            <motion.div
+              role="dialog"
+              aria-labelledby={`${detailsId}-title`}
+              initial={{ opacity: 0, scale: 0.95, y: -4 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.12 } }}
+              transition={{ type: "spring", stiffness: 500, damping: 34 }}
+              className={clsx(
+                "absolute top-full z-30 mt-2 w-64 rounded-xl border border-line bg-white p-3.5 shadow-xl shadow-zinc-900/10",
+                alignEnd ? "right-0 origin-top-right" : "left-0 origin-top-left",
+              )}
+            >
+              {details}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
+
+      {isMobile &&
+        createPortal(
+          <BottomSheet open={open} onClose={() => setOpen(false)} labelledBy={`${detailsId}-title`}>
+            <div className="px-5 pb-3">{details}</div>
+          </BottomSheet>,
+          document.body,
+        )}
+    </div>
   );
 }
